@@ -1,0 +1,29 @@
+# Postgres 18 with the pgvector extension: P1's database, running on your Mac.
+#   Start:  docker compose up -d --wait     Stop:  docker compose down
+#   Wipe the data too:  docker compose down -v
+services:
+  db:
+    # Pinned: pgvector 0.8.7 on Postgres 18. Multi-arch, so it runs natively on Apple silicon.
+    image: pgvector/pgvector:0.8.7-pg18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres  # practice password for a database only this Mac can reach
+      POSTGRES_DB: rag
+    ports:
+      # your Mac's 127.0.0.1:5433 -> port 5432 inside the container.
+      # 127.0.0.1 keeps it off your Wi-Fi network; 5433 avoids clashing with another Postgres.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      # Postgres 18 images keep data under /var/lib/postgresql/18/docker, so mount the
+      # parent folder. Mounting .../data, as older guides show, makes Postgres 18 refuse to start.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # $$ passes a literal $ through Compose, so the variables expand inside the container.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata:
